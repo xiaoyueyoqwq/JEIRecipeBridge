@@ -14,8 +14,9 @@ public final class JEIRecipeBridgePlugin extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		Plugin = this;
+		saveDefaultConfig();
 
-		getServer().getPluginManager().registerEvents(new RecipeHandler(), this);
+		getServer().getPluginManager().registerEvents(new RecipeHandler(this), this);
 
 		final Server server = getServer();
 		final Messenger messenger = server.getMessenger();

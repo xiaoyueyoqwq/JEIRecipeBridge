@@ -28,6 +28,11 @@ import java.util.HashSet;
 import java.util.List;
 
 public class RecipeHandler implements Listener {
+	private final JEIRecipeBridgePlugin plugin;
+
+	public RecipeHandler(JEIRecipeBridgePlugin plugin) {
+		this.plugin = plugin;
+	}
 
 	@EventHandler
 	public void onJoin(PlayerJoinEvent event) {
@@ -35,20 +40,30 @@ public class RecipeHandler implements Listener {
 		final ServerPlayer player = ((CraftPlayer) originalPlayer).getHandle();
 		final MinecraftServer server = player.level().getServer();
 		final RecipeManager recipeManager = server.getRecipeManager();
-
-		originalPlayer.sendMessage("§6PaperMC JEI Compat: Syncing Recipes...§r");
-
-		RecipeMap recipeMap = recipeManager.recipes;
-
-		RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), server.registryAccess());
 		String brand = originalPlayer.getClientBrandName();
 		if (brand == null) {
 			return; // Unknown brand, do not send any custom payload
 		}
-		if (brand.equalsIgnoreCase("fabric")) {
-			sendFabricPayload(player, recipeMap, buffer);
-		} else if (brand.equalsIgnoreCase("neoforge")) {
-			sendNeoForgePayload(player, server, recipeMap, buffer);
+
+		RecipeMap recipeMap = recipeManager.recipes;
+		RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), server.registryAccess());
+
+		try {
+			if (brand.equalsIgnoreCase("fabric")) {
+				sendFabricPayload(player, recipeMap, buffer);
+				sendSyncMessage(originalPlayer);
+			} else if (brand.equalsIgnoreCase("neoforge")) {
+				sendNeoForgePayload(player, server, recipeMap, buffer);
+				sendSyncMessage(originalPlayer);
+			}
+		} catch (RuntimeException | LinkageError exception) {
+			JEIRecipeBridgePlugin.LOGGER.error("Failed to sync JEI recipes to player '{}' with client brand '{}'", originalPlayer.getName(), brand, exception);
+		}
+	}
+
+	private void sendSyncMessage(Player player) {
+		if (plugin.getConfig().getBoolean("show-sync-message", false)) {
+			player.sendMessage("JEIRecipeBridge: Syncing recipes...");
 		}
 	}
 
